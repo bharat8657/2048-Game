@@ -2,172 +2,109 @@ package game2048.movements;
 
 import game2048.point.Point;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class Movement {
 
-    private static List<Point> TEMPORARY_LIST;
-    private static final ComparatorX COMPARATOR_X = new ComparatorX();
-    private static final ComparatorY COMPARATOR_Y = new ComparatorY();
-    private static int firstPlace, secondPlace, thirdPlace, fourthPlace;    // indexes of main places for numbers on board
-    private static int threeElementsFirst, threeElementsSecond, threeElementsThird, auxiliaryCoordinateIndex;   // auxiliary variables
-    private static int forTwoElementsRowWithoutChangesFirstPlace, forTwoElementsRowWithoutChangesSecondPlace;   // auxiliary variables
+    public static List<Point> eachRowAndColumnProcessing(List<Point> fullGrid,
+                                                         int firstCoordinate,
+                                                         CoordinateGetter rowGetter,
+                                                         CoordinateSetter coordinateSetter,
+                                                         Comparator<Point> comparator) {
+        //   x0   x1   x2   x3
+        //  [2]  [2]  [ ]  [2] y0
+        //  [ ]  [4]  [4]  [ ] y1
+        //  [ ]  [2]  [ ]  [ ] y2
+        //  [2]  [ ]  [3]  [ ] y3
 
-    //  x0  x1  x2   x3
-    //  [2]  [2]  [ ]  [2] y0
-    //  [ ]  [4]  [4]  [ ] y1
-    //  [ ]  [2]  [ ]  [ ] y2
-    //  [2]  [ ]  [3]  [ ] y3
+        for (int i = 0; i < 4; i++) {
 
-    public static void eachRowProcessing (CoordinateGetter rowGetter,
-                                         CoordinateSetter rowSetter,
-                                         Comparator<Point> comparator,
-                                         CoordinateGetter coordinateGetter,
-                                         CoordinateSetter coordinateSetter) {
-        IntStream.range(0, 4).forEach(rowIndex -> {
+            int finalI = i;
 
-            List<Point> certainLineOfGameField = TEMPORARY_LIST.stream()
-                    .filter(point -> rowGetter.getCoordinate(point) == rowIndex)
+            List<Point> individualRowOrColumn = fullGrid.stream()
+                    .filter(point -> rowGetter.getCoordinate(point) == finalI)
                     .sorted(comparator)
                     .collect(Collectors.toList());
+            if (individualRowOrColumn.size() >= 1) {
+                if (firstCoordinate == 0) {
+                    assignAscendingCoordinates(individualRowOrColumn, coordinateSetter, firstCoordinate);
+                } else {
+                    assignDescendingCoordinates(individualRowOrColumn, coordinateSetter, firstCoordinate);
+                }
 
-            switch (certainLineOfGameField.size()) {
-                case 1:
-                    oneElementProcessing(certainLineOfGameField.get(0), coordinateGetter, coordinateSetter);
-                    certainLineOfGameField.clear();
-                    break;
-                case 2:
-                    twoElementsProcessing(certainLineOfGameField, rowIndex, rowSetter, coordinateSetter);
-                    break;
-                case 3:
-                    threeElementsProcessing(certainLineOfGameField, coordinateSetter);
-                    break;
-                case 4:
-                    fourElementsProcessing(certainLineOfGameField);
-                    break;
+                if (individualRowOrColumn.size() == 1) {
+                    coordinateSetter.setCoordinate(individualRowOrColumn.get(0), firstCoordinate);
+                } else {
+                    fullGrid.removeAll(checkingForTheSameDigits(individualRowOrColumn));
+                }
             }
+        }
+        return fullGrid;
+    }
+
+
+    private static synchronized void assignAscendingCoordinates(List<Point> oneRow, CoordinateSetter coordinateSetter, int index) {
+        AtomicInteger finalXCoordinate = new AtomicInteger(index);
+        oneRow.forEach(point -> {
+            coordinateSetter.setCoordinate(point, finalXCoordinate.get());
+            finalXCoordinate.getAndIncrement();
         });
     }
 
-    public static List<Point> moveLeft(List<Point> allPointsList) {
-        auxiliaryMethodLeftUp();
-        TEMPORARY_LIST = allPointsList;
-        eachRowProcessing(new YGetter(), new YSetter(), COMPARATOR_X, new XGetter(), new XSetter());
-        return TEMPORARY_LIST;
-    }
-
-    public static List<Point> moveRight(List<Point> allPointsList) {
-        auxiliaryMethodRightDown();
-        TEMPORARY_LIST = allPointsList;
-        eachRowProcessing(new YGetter(), new YSetter(), COMPARATOR_X, new XGetter(), new XSetter());
-        return TEMPORARY_LIST;
-    }
-
-    public static List<Point> moveUp(List<Point> allPointsList) {
-        auxiliaryMethodLeftUp();
-        TEMPORARY_LIST = allPointsList;
-        eachRowProcessing(new XGetter(), new XSetter(), COMPARATOR_Y, new YGetter(), new YSetter());
-        return TEMPORARY_LIST;
-    }
-
-    public static List<Point> moveDown(List<Point> allPointsList) {
-        auxiliaryMethodRightDown();
-        TEMPORARY_LIST = allPointsList;
-        eachRowProcessing(new XGetter(), new XSetter(), COMPARATOR_Y, new YGetter(), new YSetter());
-        return TEMPORARY_LIST;
-    }
-
-
-    private static void oneElementProcessing (Point point, CoordinateGetter coordinateGetter, CoordinateSetter coordinateSetter) {
-        if (coordinateGetter.getCoordinate(point) != firstPlace){
-            coordinateSetter.setCoordinate(point, firstPlace);
-        }
-    }
-
-    private static void twoElementsProcessing (List<Point> twoPointsList, int rowIndex, CoordinateSetter rowSetter, CoordinateSetter coordinateSetter) {
-
-        if (twoPointsList.get(0).getValue().equals(twoPointsList.get(1).getValue())) {
-            rowSetter.setCoordinate(twoPointsList.get(0), rowIndex);
-            coordinateSetter.setCoordinate(twoPointsList.get(0), firstPlace);
-            twoPointsList.get(0).setValue(twoPointsList.get(0).getValue() + twoPointsList.get(1).getValue());
-            TEMPORARY_LIST.remove(twoPointsList.get(1));
-        } else {
-            coordinateSetter.setCoordinate(twoPointsList.get(0), forTwoElementsRowWithoutChangesFirstPlace); //0  2
-            coordinateSetter.setCoordinate(twoPointsList.get(1), forTwoElementsRowWithoutChangesSecondPlace); //1  3
-        }
-    }
-
-    private static void threeElementsProcessing (List<Point> threePointsList, CoordinateSetter rowSetter) {
-
-        threePointsList.forEach(point -> {
-            rowSetter.setCoordinate(point, auxiliaryCoordinateIndex);
-            auxiliaryCoordinateIndex++;
+    private static synchronized void assignDescendingCoordinates(List<Point> oneRow, CoordinateSetter coordinateSetter, int index) {
+        AtomicInteger finalXCoordinate = new AtomicInteger(index);
+        oneRow.forEach(point -> {
+            coordinateSetter.setCoordinate(point, finalXCoordinate.get());
+            finalXCoordinate.getAndDecrement();
         });
-
-        if (threePointsList.get(threeElementsFirst).getValue().equals(threePointsList.get(threeElementsSecond).getValue())) {
-            threePointsList.get(threeElementsFirst).setValue(threePointsList.get(threeElementsFirst).getValue() + threePointsList.get(threeElementsSecond).getValue());
-            threePointsList.get(threeElementsSecond).setValue(threePointsList.get(threeElementsThird).getValue());
-            TEMPORARY_LIST.remove(threePointsList.get(threeElementsThird));
-        } else if (threePointsList.get(threeElementsSecond).getValue().equals(threePointsList.get(threeElementsThird).getValue())) {
-            threePointsList.get(threeElementsSecond).setValue(threePointsList.get(threeElementsSecond).getValue() + threePointsList.get(threeElementsThird).getValue());
-            TEMPORARY_LIST.remove(threePointsList.get(threeElementsThird));
-        }
-        auxiliaryCoordinateIndex -= 3;
     }
 
-    private static void fourElementsProcessing (List<Point> fourElementsList) {
+    private static synchronized List<Point> checkingForTheSameDigits(List<Point> oneRowOrColumn) {
+        int counter = 0;
+        List<Point> elementsToRemove = new ArrayList<>();
+        do {
+            if (oneRowOrColumn.get(counter).getValue().equals(oneRowOrColumn.get(counter + 1).getValue())) {
+                slideByOnePosition(oneRowOrColumn, counter);
+//                wholeGrid.remove(oneRowOrColumn.get(oneRowOrColumn.size() - 1));
+                elementsToRemove.add(oneRowOrColumn.get(oneRowOrColumn.size() - 1));
+                oneRowOrColumn.remove(oneRowOrColumn.size() - 1);
+            }
+            counter++;
+        } while (counter <= oneRowOrColumn.size() - 2);
+        return elementsToRemove;
+    }
 
-        int manipulator = 0;
+    private static synchronized void slideByOnePosition(List<Point> oneRowOrColumn, int firstElement) {
 
-        if (fourElementsList.get(firstPlace).getValue().equals(fourElementsList.get(secondPlace).getValue())) {
-            fourElementsList.get(firstPlace).setValue(fourElementsList.get(firstPlace).getValue() + fourElementsList.get(secondPlace).getValue());
-            fourElementsList.get(secondPlace).setValue(fourElementsList.get(thirdPlace).getValue());
-            fourElementsList.get(thirdPlace).setValue(fourElementsList.get(fourthPlace).getValue());
-            TEMPORARY_LIST.remove(fourElementsList.get(fourthPlace));
-            fourElementsList.remove(fourthPlace);
-            manipulator = 1;
-        } else if (fourElementsList.get(secondPlace).getValue().equals(fourElementsList.get(thirdPlace).getValue())) {
-            fourElementsList.get(secondPlace).setValue(fourElementsList.get(secondPlace).getValue() + fourElementsList.get(thirdPlace).getValue());
-            fourElementsList.get(thirdPlace).setValue(fourElementsList.get(fourthPlace).getValue());
-            TEMPORARY_LIST.remove(fourElementsList.get(fourthPlace));
-            fourElementsList.remove(fourthPlace);
-            manipulator = 2;
-        } if (manipulator == 1 && fourElementsList.get(threeElementsSecond).getValue().equals(fourElementsList.get(threeElementsThird).getValue())) {
-                fourElementsList.get(threeElementsSecond).setValue(fourElementsList.get(threeElementsSecond).getValue() + (fourElementsList.get(threeElementsThird).getValue()));
-                TEMPORARY_LIST.remove(fourElementsList.get(threeElementsThird));
-        } else if (manipulator == 0 && fourElementsList.get(thirdPlace).getValue().equals(fourElementsList.get(fourthPlace).getValue())) {  // 2 3
-            fourElementsList.get(thirdPlace).setValue(fourElementsList.get(thirdPlace).getValue() + (fourElementsList.get(fourthPlace).getValue())); // 0 1
-            TEMPORARY_LIST.remove(fourElementsList.get(fourthPlace));
+        int checker = firstElement;
+        System.out.println(checker);
+
+        oneRowOrColumn.get(checker).setValue(oneRowOrColumn.get(checker).getValue() + oneRowOrColumn.get(checker + 1).getValue());
+        checker++;
+        while (checker <= oneRowOrColumn.size() - 2) {
+            oneRowOrColumn.get(checker).setValue(oneRowOrColumn.get(checker + 1).getValue());
+            checker++;
         }
     }
 
-
-    private static void auxiliaryMethodLeftUp() {
-        forTwoElementsRowWithoutChangesFirstPlace = 0;
-        forTwoElementsRowWithoutChangesSecondPlace = 1;
-        auxiliaryCoordinateIndex = 0;
-        threeElementsFirst = 0;
-        threeElementsSecond = 1;
-        threeElementsThird = 2;
-        firstPlace = 0;
-        secondPlace = 1;
-        thirdPlace = 2;
-        fourthPlace = 3;
+    public static synchronized List<Point> moveLeft(List<Point> allPointsList) {
+        return eachRowAndColumnProcessing(allPointsList, 0, new YGetter(), new XSetter(), new DirectComparatorX());
     }
 
-    private static void auxiliaryMethodRightDown() {
-        forTwoElementsRowWithoutChangesFirstPlace = 2;
-        forTwoElementsRowWithoutChangesSecondPlace = 3;
-        auxiliaryCoordinateIndex = 1;
-        threeElementsFirst = 2;
-        threeElementsSecond = 1;
-        threeElementsThird = 0;
-        firstPlace = 3;
-        secondPlace = 2;
-        thirdPlace = 1;
-        fourthPlace = 0;
+    public static synchronized List<Point> moveRight(List<Point> allPointsList) {
+        return eachRowAndColumnProcessing(allPointsList, 3, new YGetter(), new XSetter(), new ReversedComparatorX());
     }
+
+    public static synchronized List<Point> moveUp(List<Point> allPointsList) {
+        return eachRowAndColumnProcessing(allPointsList, 0, new XGetter(), new YSetter(), new DirectComparatorY());
+    }
+
+    public static synchronized List<Point> moveDown(List<Point> allPointsList) {
+        return eachRowAndColumnProcessing(allPointsList, 3, new XGetter(), new YSetter(), new ReversedComparatorY());
+    }
+
 }
