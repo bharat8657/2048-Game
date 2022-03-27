@@ -1,7 +1,6 @@
 package game2048.movements;
 
 import game2048.point.Point;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -69,7 +68,6 @@ public class Movement {
         do {
             if (oneRowOrColumn.get(counter).getValue().equals(oneRowOrColumn.get(counter + 1).getValue())) {
                 slideByOnePosition(oneRowOrColumn, counter);
-//                wholeGrid.remove(oneRowOrColumn.get(oneRowOrColumn.size() - 1));
                 elementsToRemove.add(oneRowOrColumn.get(oneRowOrColumn.size() - 1));
                 oneRowOrColumn.remove(oneRowOrColumn.size() - 1);
             }
@@ -79,10 +77,7 @@ public class Movement {
     }
 
     private static synchronized void slideByOnePosition(List<Point> oneRowOrColumn, int firstElement) {
-
         int checker = firstElement;
-        System.out.println(checker);
-
         oneRowOrColumn.get(checker).setValue(oneRowOrColumn.get(checker).getValue() + oneRowOrColumn.get(checker + 1).getValue());
         checker++;
         while (checker <= oneRowOrColumn.size() - 2) {

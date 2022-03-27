@@ -1,25 +1,24 @@
 package game2048;
 
 import game2048.gamegraphik.ideaconsole.Game2048Console;
-import game2048.gamegraphik.swingconsole.AuthorizationFrame;
+import game2048.gamegraphik.swingconsole.Game2048Graphic;
 import org.hibernate.SessionFactory;
 
-import javax.swing.*;
-
 public class Main {
+
+    private static final SessionFactory SESSION_FACTORY = new Factory().getSessionFactory();
+
     public static void main(String[] args) {
 
-        SessionFactory sessionFactory = new Factory().getSessionFactory();
+// uncomment below to play through the graphic window (swing)
+
+        Game2048Graphic game2048Graphic = new Game2048Graphic(SESSION_FACTORY);
+        game2048Graphic.start();
 
 
-        JFrame authorizationFrame = new AuthorizationFrame();
+//uncomment below to play though the IDEA console
 
-
-
-
-
-
-//        Game2048Console game2048Console = new Game2048Console(sessionFactory);
+//        Game2048Console game2048Console = new Game2048Console(SESSION_FACTORY);
 //        game2048Console.start();
     }
 }

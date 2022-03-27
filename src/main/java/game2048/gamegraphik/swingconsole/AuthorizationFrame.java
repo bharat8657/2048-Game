@@ -1,19 +1,41 @@
 package game2048.gamegraphik.swingconsole;
 
+import game2048.board.BoardGenerator;
+import game2048.board.BoardProcessor;
+import game2048.user.User;
+import game2048.user.UserProcessor;
+import org.hibernate.SessionFactory;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.geom.RoundRectangle2D;
 
 public class AuthorizationFrame extends JFrame {
 
-    private JLabel NICKNAME_INPUT;
-    private JLabel GAME_LOGO;
+    private final SessionFactory sessionFactory;
+    private final UserProcessor USER_PROCESSOR = new UserProcessor();
+    private final BoardProcessor BOARD_PROCESSOR = new BoardProcessor();
+    private JLabel nicknameInput;
+    private JLabel gameLogo;
+    private JButton acceptButton;
+    private JTextField nickInputField;
     private static final ImageIcon IMAGE_ICON = new ImageIcon("game2048_logo.png");
 
-    public AuthorizationFrame() {
-        setNicknameInput();
+    public AuthorizationFrame(SessionFactory sessionFactory) {
+        this.sessionFactory = sessionFactory;
+        setAcceptButton();
         setGameLogo();
+        setNickInputField();
+        setNicknameInput();
         setAuthorizationFrame();
+    }
+
+    private void setNickInputField() {
+        this.nickInputField = new JTextField("Your nickname");
+        this.nickInputField.setBounds(0,0,233,55);
+        this.nickInputField.setBackground(new Color(0xd1c6b9));
+        this.nickInputField.setFont(new Font("Book Antiqua", Font.ITALIC, 30));
+        this.nickInputField.setForeground(new Color(0x776e65));
+        this.nickInputField.setBorder(BorderFactory.createEtchedBorder());
     }
 
     private void setAuthorizationFrame() {
@@ -26,26 +48,48 @@ public class AuthorizationFrame extends JFrame {
         this.setLocationRelativeTo(null);
         this.setLayout(null);
         this.setVisible(true);
-        this.add(NICKNAME_INPUT);
-        this.add(GAME_LOGO);
+        this.add(nicknameInput);
+        this.add(gameLogo);
     }
 
+    private void setAcceptButton() {
+        this.acceptButton = new JButton();
+        this.acceptButton.setBounds(0,55,233,55);
+        this.acceptButton.setText("Accept");
+        this.acceptButton.setFont(new Font("Book Antiqua", Font.ITALIC, 30));
+        this.acceptButton.setForeground(new Color(0x776e65));
+        this.acceptButton.setBorder(BorderFactory.createEtchedBorder());
+        this.acceptButton.setFocusable(false);
+        this.acceptButton.setBackground(new Color(0xede0c8));
+        this.acceptButton.addActionListener(e -> {
+            this.acceptButton.setText("Loading...");
+            this.acceptButton.setEnabled(false);
+            this.dispose();
+            User activeUser = USER_PROCESSOR.getUser(this.nickInputField.getText(), sessionFactory);
+            if (BOARD_PROCESSOR.getUserBoardList(activeUser.getId(), sessionFactory).isEmpty()) {
+                BOARD_PROCESSOR.addNewBoard(activeUser, BoardGenerator.generateNewBoard(), this.sessionFactory);
+                new GamingFrame(activeUser, sessionFactory);
+            } else {
+                new MenuFrame(activeUser, sessionFactory, gameLogo, BOARD_PROCESSOR);
+            }
+        });
+    }
+
+
     private void setNicknameInput() {
-        this.NICKNAME_INPUT = new JLabel();
-        this.NICKNAME_INPUT.setText("bla bla bla");
-        this.NICKNAME_INPUT.setHorizontalAlignment(JLabel.CENTER);
-        this.NICKNAME_INPUT.setVerticalTextPosition(JLabel.CENTER);
-        this.NICKNAME_INPUT.setBackground(new Color(0xf2b179));
-        this.NICKNAME_INPUT.setOpaque(true);
-        this.NICKNAME_INPUT.setBorder(BorderFactory.createLineBorder(new Color(0x2D2102), 1));
-        this.NICKNAME_INPUT.setBounds(26,10,233,110);
+        this.nicknameInput = new JLabel();
+        this.nicknameInput.setBackground(new Color(0xf2b179));
+        this.nicknameInput.setOpaque(true);
+        this.nicknameInput.setBorder(BorderFactory.createLineBorder(new Color(0x2D2102), 1));
+        this.nicknameInput.setBounds(26,10,233,110);
+        this.nicknameInput.add(acceptButton);
+        this.nicknameInput.add(nickInputField);
     }
 
     private void setGameLogo () {
-        this.GAME_LOGO = new JLabel();
-        this.GAME_LOGO.setBounds(10,130,265,265);
-        this.GAME_LOGO.setIcon(new ImageIcon(IMAGE_ICON.getImage().getScaledInstance(GAME_LOGO.getWidth(), GAME_LOGO.getHeight(), Image.SCALE_DEFAULT)));
+        this.gameLogo = new JLabel();
+        this.gameLogo.setBounds(10,130,265,265);
+        this.gameLogo.setIcon(new ImageIcon(IMAGE_ICON.getImage().getScaledInstance(gameLogo.getWidth(), gameLogo.getHeight(), Image.SCALE_DEFAULT)));
     }
 
-//    private Image
 }
